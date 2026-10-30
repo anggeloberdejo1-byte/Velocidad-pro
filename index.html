@@ -493,7 +493,40 @@
 
   /* ---- Sonido ---- */
 
-  .eq { display: grid; grid-template-columns: 74px 1fr 64px; align-items: center; gap: 10px; }
+  .geq { position: relative; padding: 4px 0 0; }
+  .geq-curva { position: absolute; left: 0; right: 0; top: 26px; height: 180px; width: 100%; pointer-events: none; }
+  .geq-bandas { position: relative; display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+  .geq-banda { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+  .geq-valor { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: var(--parchment-dim); height: 16px; line-height: 16px; white-space: nowrap; }
+  .geq-valor.on { color: var(--brass); }
+  .fader {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    cursor: ns-resize;
+    touch-action: none;
+    border-radius: 6px;
+  }
+  .fader:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .fader-riel { position: absolute; left: 50%; top: 6px; bottom: 6px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--surface-2); }
+  .fader-cero { position: absolute; left: 50%; top: 50%; width: 18px; height: 2px; margin: -1px 0 0 -9px; background: var(--parchment-dim); opacity: 0.45; }
+  .fader-relleno { position: absolute; left: 50%; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--brass); }
+  .fader-perilla {
+    position: absolute;
+    left: 50%;
+    width: 26px;
+    height: 14px;
+    margin: -7px 0 0 -13px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 2px solid var(--parchment);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .fader-perilla::after { content: ""; position: absolute; left: 3px; right: 3px; top: 50%; height: 2px; margin-top: -1px; background: var(--brass); border-radius: 1px; }
+  .geq-hz { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--parchment-dim); white-space: nowrap; }
+  .geq-escala { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--parchment-dim); margin: 4px 0 0; }
+  .geq-presets { margin-top: 14px; }
+  .eq { display: grid; grid-template-columns: 74px 1fr 64px; align-items: center; gap: 10px; margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--surface-2); }
   .eq label { font-size: 13.5px; font-weight: 600; }
   .eq output { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--parchment-dim); text-align: right; }
 
@@ -533,6 +566,8 @@
     .tab { font-size: 12.5px; padding: 10px 2px 12px; }
     .theme-grid { grid-template-columns: repeat(2, 1fr); }
     .cuerda { width: 48px; height: 48px; }
+    .fader-perilla { width: 22px; margin-left: -11px; }
+    .geq-hz, .geq-valor { font-size: 9.5px; }
     .exportar { flex-direction: column; align-items: stretch; }
     .atajos { display: none; }
   }
@@ -757,10 +792,17 @@
 
   <!-- Sonido -->
   <section class="panel vista" id="vista-sonido" hidden>
+    <div class="tempo-row" style="margin-bottom:4px">
+      <span class="tempo-label" data-i18n="ecualizador">Ecualizador</span>
+      <span class="geq-escala" style="margin:0;gap:10px"><span>+12 / −12 dB</span></span>
+    </div>
+    <div class="geq">
+      <canvas class="geq-curva" id="geqCurva" aria-hidden="true"></canvas>
+      <div class="geq-bandas" id="geqBandas"></div>
+    </div>
+    <div class="presets geq-presets" id="geqPresets"></div>
+    <p class="nota" data-i18n="geqNota">Arrastra cada barra hacia arriba o abajo. Doble toque la regresa a 0.</p>
     <div class="eq">
-      <label for="graves" data-i18n="graves">Graves</label><input type="range" id="graves" min="-12" max="12" step="1" value="0"><output id="gravesV">0 dB</output>
-      <label for="medios" data-i18n="medios">Medios</label><input type="range" id="medios" min="-12" max="12" step="1" value="0"><output id="mediosV">0 dB</output>
-      <label for="agudos" data-i18n="agudos">Agudos</label><input type="range" id="agudos" min="-12" max="12" step="1" value="0"><output id="agudosV">0 dB</output>
       <label for="volumen" data-i18n="volumen">Volumen</label><input type="range" id="volumen" min="0" max="150" step="1" value="100"><output id="volumenV">100%</output>
     </div>
     <label class="switch" style="margin-top:8px">
@@ -1121,7 +1163,9 @@ const TEXTOS = {
     empieza: 'Empieza (%)', meta: 'Meta (%)', sube: 'Sube (%)', cada: 'Cada (vueltas)',
     empezarSubida: 'Empezar subida', detenerSubida: 'Detener subida',
     vuelta: 'Vuelta', de: 'de', metaLograda: '¡Meta alcanzada!',
-    graves: 'Graves', medios: 'Medios', agudos: 'Agudos', volumen: 'Volumen',
+    volumen: 'Volumen', ecualizador: 'Ecualizador',
+    geqNota: 'Arrastra cada barra hacia arriba o abajo. Doble toque la regresa a 0.',
+    pPlano: 'Plano', pBajo: 'Escuchar el bajo', pVientos: 'Escuchar vientos', pVoz: 'Voz al frente', pPercusion: 'Percusión', pCelular: 'Grabación de celular',
     voz: 'Reducir voz', vozNota: 'Quita lo que suena al centro (casi siempre la voz) y deja los graves. Funciona mejor en grabaciones de estudio.',
     sonidoReset: 'Sonido original',
     exportarNota: 'Descarga el audio con la velocidad, el tono y el sonido que elegiste (WAV). Si el loop está activo, solo baja ese pedazo.',
@@ -1173,7 +1217,9 @@ const TEXTOS = {
     empieza: 'Start (%)', meta: 'Goal (%)', sube: 'Step (%)', cada: 'Every (loops)',
     empezarSubida: 'Start ramp', detenerSubida: 'Stop ramp',
     vuelta: 'Loop', de: 'of', metaLograda: 'Goal reached!',
-    graves: 'Bass', medios: 'Mids', agudos: 'Treble', volumen: 'Volume',
+    volumen: 'Volume', ecualizador: 'Equalizer',
+    geqNota: 'Drag each bar up or down. Double-tap to reset it to 0.',
+    pPlano: 'Flat', pBajo: 'Hear the bass', pVientos: 'Hear the horns', pVoz: 'Vocals forward', pPercusion: 'Percussion', pCelular: 'Phone recording',
     voz: 'Reduce vocals', vozNota: 'Removes what sits in the center (usually the voice) and keeps the bass. Works best on studio recordings.',
     sonidoReset: 'Original sound',
     exportarNota: 'Download the audio with your speed, pitch and sound settings (WAV). If the loop is on, only that part is saved.',
@@ -1229,7 +1275,16 @@ let bpm = null;
 const loop = { on: false, a: 0, b: 0 };
 let cuentaOn = false, respiroOn = false;
 let secciones = [];
-const sonido = { graves: 0, medios: 0, agudos: 0, vol: 100, voz: false };
+const BANDAS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+const PRESETS_EQ = {
+  pPlano: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  pBajo: [4, 6, 5, 2, -2, -4, -5, -6, -6, -6],
+  pVientos: [-6, -5, -3, -1, 2, 4, 5, 3, 0, -2],
+  pVoz: [-4, -3, -1, 0, 2, 4, 4, 2, 0, -1],
+  pPercusion: [2, 3, 1, -2, -2, 0, 2, 4, 5, 4],
+  pCelular: [-8, -4, 0, 1, 1, 1, 0, -2, -5, -8],
+};
+const sonido = { eq: BANDAS.map(() => 0), vol: 100, voz: false };
 const subida = { on: false, reps: 0 };
 let wakeLock = null;
 
@@ -1259,6 +1314,17 @@ function aviso(texto) {
 /* =====================================================================
  * Audio
  * ===================================================================== */
+// Ecualizador gráfico: una campana por octava, como en una consola.
+function crearBandas(ctx) {
+  return BANDAS.map((hz) => {
+    const f = ctx.createBiquadFilter();
+    f.type = 'peaking';
+    f.frequency.value = hz;
+    f.Q.value = 1.4;
+    return f;
+  });
+}
+
 function construirCadena(ctx, entrada) {
   const g = (v) => { const n = ctx.createGain(); n.gain.value = v; return n; };
 
@@ -1281,11 +1347,11 @@ function construirCadena(ctx, entrada) {
   lado.connect(mezcla);
   entrada.connect(bajos).connect(bajosG).connect(mezcla);
 
-  const graves = ctx.createBiquadFilter(); graves.type = 'lowshelf'; graves.frequency.value = 150;
-  const medios = ctx.createBiquadFilter(); medios.type = 'peaking'; medios.frequency.value = 1000; medios.Q.value = 0.8;
-  const agudos = ctx.createBiquadFilter(); agudos.type = 'highshelf'; agudos.frequency.value = 4500;
+  const filtros = crearBandas(ctx);
   const vol = g(1);
-  mezcla.connect(graves).connect(medios).connect(agudos).connect(vol);
+  let ultimo = mezcla;
+  for (const f of filtros) ultimo = ultimo.connect(f);
+  ultimo.connect(vol);
 
   return {
     salida: vol,
@@ -1293,9 +1359,7 @@ function construirCadena(ctx, entrada) {
       seco.gain.value = s.voz ? 0 : 1;
       lado.gain.value = s.voz ? 1 : 0;
       bajosG.gain.value = s.voz ? 1 : 0;
-      graves.gain.value = s.graves;
-      medios.gain.value = s.medios;
-      agudos.gain.value = s.agudos;
+      filtros.forEach((f, i) => { f.gain.value = s.eq[i] || 0; });
       vol.gain.value = s.vol / 100;
     }
   };
@@ -1593,6 +1657,7 @@ function leerColores() {
   const v = (n) => css.getPropertyValue('--' + n).trim();
   col = { dim: v('parchment-dim'), brass: v('brass'), ember: v('ember'), surface: v('surface'), parchment: v('parchment') };
   baseSucia = true;
+  if (typeof dibujarCurva === 'function') dibujarCurva();
 }
 leerColores();
 
@@ -1959,15 +2024,159 @@ function actualizarTodo() {
  * ===================================================================== */
 function aplicarSonido() {
   if (cadena) cadena.aplicar(sonido);
-  $('gravesV').textContent = (sonido.graves > 0 ? '+' : '') + sonido.graves + ' dB';
-  $('mediosV').textContent = (sonido.medios > 0 ? '+' : '') + sonido.medios + ' dB';
-  $('agudosV').textContent = (sonido.agudos > 0 ? '+' : '') + sonido.agudos + ' dB';
   $('volumenV').textContent = sonido.vol + '%';
-  for (const k of ['graves', 'medios', 'agudos']) $(k).value = sonido[k];
+  actualizarFaders();
   $('volumen').value = sonido.vol;
   $('vozOn').checked = sonido.voz;
   guardarPref('sonido', sonido);
 }
+
+/* =====================================================================
+ * Ecualizador gráfico (faders verticales + curva de respuesta)
+ * ===================================================================== */
+const EQ_MAX = 12;
+const etiquetaHz = (hz) => (hz >= 1000 ? hz / 1000 + 'k' : String(hz));
+const fmtDb = (v) => (v > 0 ? '+' : '') + v;
+// Filtros "de mentira" solo para dibujar la curva, sin depender del audio.
+var curvaFiltros = crearBandas(new OfflineAudioContext(1, 1, 44100));
+
+function ponerBanda(i, v) {
+  v = Math.max(-EQ_MAX, Math.min(EQ_MAX, Math.round(v)));
+  if (sonido.eq[i] === v) return;
+  sonido.eq[i] = v;
+  aplicarSonido();
+}
+
+function crearFaders() {
+  const caja = $('geqBandas');
+  caja.innerHTML = '';
+  BANDAS.forEach((hz, i) => {
+    const banda = document.createElement('div');
+    banda.className = 'geq-banda';
+    const valor = document.createElement('div');
+    valor.className = 'geq-valor';
+    const fader = document.createElement('div');
+    fader.className = 'fader';
+    fader.tabIndex = 0;
+    fader.setAttribute('role', 'slider');
+    fader.setAttribute('aria-orientation', 'vertical');
+    fader.setAttribute('aria-valuemin', -EQ_MAX);
+    fader.setAttribute('aria-valuemax', EQ_MAX);
+    fader.setAttribute('aria-label', etiquetaHz(hz) + ' Hz');
+    fader.innerHTML = '<div class="fader-riel"></div><div class="fader-cero"></div><div class="fader-relleno"></div><div class="fader-perilla"></div>';
+    const hzEl = document.createElement('div');
+    hzEl.className = 'geq-hz';
+    hzEl.textContent = etiquetaHz(hz);
+    banda.append(valor, fader, hzEl);
+    caja.appendChild(banda);
+
+    const desdeY = (y) => {
+      const r = fader.getBoundingClientRect();
+      const fr = (y - r.top - 6) / (r.height - 12);
+      return EQ_MAX - Math.max(0, Math.min(1, fr)) * EQ_MAX * 2;
+    };
+    let arrastrando = null;
+    fader.addEventListener('pointerdown', (e) => {
+      arrastrando = e.pointerId;
+      fader.setPointerCapture(e.pointerId);
+      ponerBanda(i, desdeY(e.clientY));
+      e.preventDefault();
+    });
+    fader.addEventListener('pointermove', (e) => { if (arrastrando === e.pointerId) ponerBanda(i, desdeY(e.clientY)); });
+    fader.addEventListener('pointerup', () => { arrastrando = null; });
+    fader.addEventListener('pointercancel', () => { arrastrando = null; });
+    fader.addEventListener('dblclick', () => ponerBanda(i, 0));
+    fader.addEventListener('keydown', (e) => {
+      const pasos = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 3, PageDown: -3 };
+      if (e.key in pasos) ponerBanda(i, sonido.eq[i] + pasos[e.key]);
+      else if (e.key === 'Home' || e.key === '0') ponerBanda(i, 0);
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  const presets = $('geqPresets');
+  presets.innerHTML = '';
+  Object.keys(PRESETS_EQ).forEach((k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.dataset.preset = k;
+    b.dataset.i18n = k;
+    b.textContent = t(k);
+    b.onclick = () => { sonido.eq = PRESETS_EQ[k].slice(); aplicarSonido(); };
+    presets.appendChild(b);
+  });
+}
+
+function actualizarFaders() {
+  const bandas = document.querySelectorAll('.geq-banda');
+  bandas.forEach((banda, i) => {
+    const v = sonido.eq[i] || 0;
+    const fr = (EQ_MAX - v) / (EQ_MAX * 2);
+    const fader = banda.querySelector('.fader');
+    const alto = fader.clientHeight - 12;
+    const y = 6 + fr * alto;
+    const medio = 6 + alto / 2;
+    banda.querySelector('.fader-perilla').style.top = y + 'px';
+    const relleno = banda.querySelector('.fader-relleno');
+    relleno.style.top = Math.min(y, medio) + 'px';
+    relleno.style.height = Math.abs(y - medio) + 'px';
+    fader.setAttribute('aria-valuenow', v);
+    fader.setAttribute('aria-valuetext', fmtDb(v) + ' dB');
+    const valor = banda.querySelector('.geq-valor');
+    valor.textContent = fmtDb(v);
+    valor.classList.toggle('on', v !== 0);
+  });
+  document.querySelectorAll('#geqPresets .chip').forEach((b) => {
+    b.classList.toggle('active', PRESETS_EQ[b.dataset.preset].every((v, i) => v === sonido.eq[i]));
+  });
+  dibujarCurva();
+}
+
+function dibujarCurva() {
+  const lienzoC = $('geqCurva');
+  if (!curvaFiltros || !lienzoC || !lienzoC.clientWidth) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.round(lienzoC.clientWidth * dpr), H = Math.round(lienzoC.clientHeight * dpr);
+  if (lienzoC.width !== W || lienzoC.height !== H) { lienzoC.width = W; lienzoC.height = H; }
+  const c = lienzoC.getContext('2d');
+  c.clearRect(0, 0, W, H);
+
+  // La columna i está centrada en x = (i + 0.5) / 10, así la curva pasa por las perillas.
+  const n = 240;
+  const freqs = new Float32Array(n);
+  for (let k = 0; k < n; k++) freqs[k] = BANDAS[0] * Math.pow(2, (k / (n - 1)) * 10 - 0.5);
+  const total = new Float32Array(n);
+  const mag = new Float32Array(n), fase = new Float32Array(n);
+  curvaFiltros.forEach((f, i) => {
+    f.gain.value = sonido.eq[i] || 0;
+    f.getFrequencyResponse(freqs, mag, fase);
+    for (let k = 0; k < n; k++) total[k] += 20 * Math.log10(mag[k]);
+  });
+  const margen = 6 * dpr;
+  const yDe = (db) => margen + ((EQ_MAX - Math.max(-EQ_MAX * 1.2, Math.min(EQ_MAX * 1.2, db))) / (EQ_MAX * 2)) * (H - 2 * margen);
+  const y0 = yDe(0);
+
+  c.beginPath();
+  for (let k = 0; k < n; k++) {
+    const x = (k / (n - 1)) * W;
+    if (k) c.lineTo(x, yDe(total[k])); else c.moveTo(x, yDe(total[k]));
+  }
+  c.strokeStyle = col.brass;
+  c.lineWidth = 2 * dpr;
+  c.globalAlpha = 0.55;
+  c.stroke();
+  c.lineTo(W, y0);
+  c.lineTo(0, y0);
+  c.closePath();
+  c.fillStyle = col.brass;
+  c.globalAlpha = 0.1;
+  c.fill();
+  c.globalAlpha = 1;
+}
+new ResizeObserver(() => actualizarFaders()).observe($('geqBandas'));
 
 /* =====================================================================
  * Exportar a WAV
@@ -2394,10 +2603,9 @@ $('nombreSeccion').addEventListener('keydown', (e) => { if (e.key === 'Enter') g
 $('subidaBtn').addEventListener('click', () => (subida.on ? pararSubida() : empezarSubida()));
 ['subInicio', 'subMeta', 'subPaso', 'subCada'].forEach((id) => $(id).addEventListener('change', () => { guardarPref('subida', leerSubida()); actualizarSubidaUI(); }));
 
-for (const k of ['graves', 'medios', 'agudos']) $(k).addEventListener('input', (e) => { sonido[k] = +e.target.value; aplicarSonido(); });
 $('volumen').addEventListener('input', (e) => { sonido.vol = +e.target.value; aplicarSonido(); });
 $('vozOn').addEventListener('change', (e) => { sonido.voz = e.target.checked; aplicarSonido(); });
-$('sonidoReset').addEventListener('click', () => { Object.assign(sonido, { graves: 0, medios: 0, agudos: 0, vol: 100, voz: false }); aplicarSonido(); });
+$('sonidoReset').addEventListener('click', () => { Object.assign(sonido, { eq: BANDAS.map(() => 0), vol: 100, voz: false }); aplicarSonido(); });
 
 $('exportar').addEventListener('click', exportar);
 
@@ -2456,7 +2664,11 @@ if ('mediaSession' in navigator) {
   $('cuentaOn').checked = cuentaOn;
   $('respiroOn').checked = respiroOn;
   $('vinilo').checked = vinilo;
-  Object.assign(sonido, leerPref('sonido', {}));
+  const sonidoGuardado = leerPref('sonido', {});
+  if (Array.isArray(sonidoGuardado.eq) && sonidoGuardado.eq.length === BANDAS.length) sonido.eq = sonidoGuardado.eq.map((v) => +v || 0);
+  if (isFinite(sonidoGuardado.vol)) sonido.vol = sonidoGuardado.vol;
+  sonido.voz = !!sonidoGuardado.voz;
+  crearFaders();
   const sub = leerPref('subida', null);
   if (sub) { $('subInicio').value = sub.inicio; $('subMeta').value = sub.meta; $('subPaso').value = sub.paso; $('subCada').value = sub.cada; }
   aplicarSonido();
