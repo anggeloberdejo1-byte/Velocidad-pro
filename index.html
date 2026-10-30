@@ -1737,12 +1737,15 @@ function cuadro() {
     g2.fillStyle = col.ember;
     g2.font = `600 ${11 * dpr}px "IBM Plex Mono", monospace`;
     g2.textBaseline = 'top';
+    const tw = 16 * dpr;
+    const angosto = aX(loop.b) - aX(loop.a) < tw * 2;
     for (const [letra, s] of [['A', loop.a], ['B', loop.b]]) {
       const x = Math.round(aX(s));
       g2.globalAlpha = loop.on ? 1 : 0.55;
       g2.fillRect(x - dpr, 0, 2 * dpr, H);
-      const tw = 16 * dpr;
-      const tx = letra === 'A' ? x : x - tw;
+      const haciaAfuera = letra === 'A' ? x - tw : x;
+      const haciaAdentro = letra === 'A' ? x : x - tw;
+      const tx = angosto ? haciaAfuera : haciaAdentro;
       g2.fillRect(tx, 0, tw, 16 * dpr);
       g2.fillStyle = col.surface;
       g2.fillText(letra, tx + 4.5 * dpr, 2.5 * dpr);
@@ -1756,7 +1759,7 @@ function cuadro() {
 
   const texto = fmt(pos / cancion.sr);
   if (texto !== ultimoTexto) { $('tActual').textContent = texto; ultimoTexto = texto; }
-  if (sonando && zoomOn && (pos > vista.f || pos < vista.i) && !loop.on) centrarZoom();
+  if (zoomOn && !loop.on && !arrastre && (pos > vista.i + (vista.f - vista.i) * 0.85 || pos < vista.i)) centrarZoom();
 }
 requestAnimationFrame(cuadro);
 
@@ -1818,7 +1821,7 @@ function terminarLoop() {
 
 function centrarZoom() {
   if (!cancion) return;
-  if (loopMarcado()) {
+  if (loop.on) {
     const margen = Math.max(cancion.sr * 0.5, (loop.b - loop.a) * 0.12);
     vista.i = Math.max(0, loop.a - margen);
     vista.f = Math.min(cancion.len, loop.b + margen);
@@ -1867,6 +1870,7 @@ function alternarLoop(forzar) {
   if (!cancion) return;
   loop.on = typeof forzar === 'boolean' ? forzar : !loop.on;
   terminarLoop();
+  if (zoomOn) centrarZoom();
   if (!loop.on && subida.on) pararSubida();
 }
 
